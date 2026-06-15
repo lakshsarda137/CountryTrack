@@ -58,11 +58,11 @@ async function writeGitHub(payload) {
 async function readBlob() {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
   try {
-    const { list, download } = await import("@vercel/blob");
+    const { list } = await import("@vercel/blob");
     const { blobs } = await list({ prefix: BLOB_PATH, token: process.env.BLOB_READ_WRITE_TOKEN });
     const hit = blobs.find(b => b.pathname === BLOB_PATH) || blobs[0];
     if (!hit?.url) return null;
-    const res = await download(hit.url, { token: process.env.BLOB_READ_WRITE_TOKEN });
+    const res = await fetch(hit.url, { cache: "no-store" });
     if (!res.ok) return null;
     return await res.json();
   } catch (e) {
@@ -75,7 +75,7 @@ async function writeBlob(payload) {
   try {
     const { put } = await import("@vercel/blob");
     await put(BLOB_PATH, JSON.stringify(payload), {
-      access: "private",
+      access: "public",
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType: "application/json",
