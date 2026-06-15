@@ -38,8 +38,11 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; overflow: hidden; }
-body.map-active { overscroll-behavior: none; }
+html, body {
+  height: 100%; margin: 0; overflow: hidden;
+  overscroll-behavior: none;
+  position: fixed; width: 100%;
+}
 body {
   font-family: var(--font-body);
   color: var(--text);
@@ -61,7 +64,11 @@ button { font-family: inherit; cursor: pointer; }
 .faint { color: var(--faint); }
 
 /* ---------- App layout ---------- */
-.app { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+.app {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
 
 .topbar {
   display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px;
@@ -69,7 +76,8 @@ button { font-family: inherit; cursor: pointer; }
   border-bottom: 1px solid var(--border-soft);
   background: oklch(0.18 0.012 60 / 0.72);
   backdrop-filter: blur(14px);
-  position: sticky; top: 0; z-index: 40;
+  z-index: 40;
+  flex-shrink: 0;
 }
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-mark {
@@ -159,16 +167,21 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 /* ---------- Flat map (fixed viewport, pan/zoom inside) ---------- */
-.map-view { position: absolute; inset: 0; overflow: hidden; touch-action: none; overscroll-behavior: none; }
-.map-wrap {
+.map-view {
   position: absolute; inset: 0;
-  background: oklch(0.145 0.012 250);
   overflow: hidden;
   touch-action: none;
   overscroll-behavior: none;
+  background: oklch(0.145 0.012 250);
 }
-.map-search, .map-reset, .map-hint { touch-action: auto; }
-.map-svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.map-ocean-bg { fill: oklch(0.145 0.012 250); }
+.map-search, .map-reset { touch-action: auto; }
+.map-svg {
+  position: absolute; inset: 0;
+  display: block; width: 100%; height: 100%;
+  touch-action: none; cursor: grab;
+  user-select: none; -webkit-user-select: none;
+}
 .map-svg:active { cursor: grabbing; }
 .map-svg path.country { stroke: oklch(0.30 0.012 60); stroke-width: 0.4px; cursor: pointer; transition: fill .25s ease, stroke .15s ease; }
 .map-svg path.country:hover { stroke: var(--gold); stroke-width: 1.1px; }
