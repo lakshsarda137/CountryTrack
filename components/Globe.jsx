@@ -44,20 +44,13 @@ function GlobeView({ store, active, onSelectCountry }) {
     return "rgba(255,255,255,0.10)";
   };
 
-  const strokeWidth = (feat) => {
-    const name = feat.__name;
-    if (window.GEO.isHomeCountry(name)) return 1.8;
-    const n = visitCount(name);
-    if (!n) return 0.35;
-    if (n === 1) return 1.2;
-    return 0.9 + n * 0.25;
-  };
-
   const polyAltitude = (feat) => {
     const name = feat.__name;
-    if (window.GEO.isHomeCountry(name)) return 0.022;
+    if (window.GEO.isHomeCountry(name)) return 0.024;
     const n = visitCount(name);
-    return n ? 0.01 + n * 0.004 : 0.012;
+    if (!n) return 0.012;
+    if (n === 1) return 0.016;
+    return 0.014 + n * 0.005;
   };
 
   const polyLabel = (feat) => {
@@ -111,8 +104,7 @@ function GlobeView({ store, active, onSelectCountry }) {
       .showAtmosphere(true).atmosphereColor("#E3B23C").atmosphereAltitude(0.18)
       .polygonsData([]).polygonAltitude(polyAltitude)
       .polygonCapColor(capColor).polygonSideColor(sideColor)
-      .polygonStrokeColor(strokeColor).polygonStrokeWidth(strokeWidth)
-      .polygonLabel(polyLabel)
+      .polygonStrokeColor(strokeColor).polygonLabel(polyLabel)
       .polygonsTransitionDuration(0)
       .onPolygonClick((feat) => { setFocused(feat.__name); stateRef.current.onSelectCountry(feat.__name); })
       .pointLat("lat").pointLng("lng").pointColor("color").pointAltitude(0.015).pointRadius("r")
@@ -152,7 +144,7 @@ function GlobeView({ store, active, onSelectCountry }) {
   useEffect(() => {
     const g = globeRef.current; if (!g) return;
     g.polygonAltitude(polyAltitude).polygonCapColor(capColor).polygonSideColor(sideColor)
-      .polygonStrokeColor(strokeColor).polygonStrokeWidth(strokeWidth).polygonLabel(polyLabel);
+      .polygonStrokeColor(strokeColor).polygonLabel(polyLabel);
     g.pointsData(buildPoints()).ringsData(buildRings());
   }, [store.visits, active, focused, gReady]);
 

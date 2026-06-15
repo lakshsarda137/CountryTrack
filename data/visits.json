@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "savedAt": 0,
+  "visits": {
+    "shalbha": [
+      "Iceland", "Norway", "Finland", "Denmark", "Switzerland", "France",
+      "Spain", "Italy", "Vatican City", "Turkiye", "Georgia", "Thailand",
+      "Cambodia", "Singapore", "Malaysia", "Indonesia",
+      "United States of America", "Kazakhstan", "Botswana", "Rwanda",
+      "Kenya", "Australia", "New Zealand", "Austria", "Germany", "Sri Lanka"
+    ],
+    "lk": [
+      "Iceland", "Norway", "Finland", "Denmark", "Switzerland", "France",
+      "Spain", "Italy", "Vatican City", "Turkiye", "Georgia", "Thailand",
+      "Cambodia", "Singapore", "Malaysia", "Indonesia",
+      "United States of America", "Canada", "United Kingdom", "Azerbaijan",
+      "Kazakhstan", "Yemen", "Oman", "Botswana", "Rwanda", "Kenya",
+      "Australia", "Sri Lanka"
+    ],
+    "laksh": [
+      "Iceland", "Norway", "Finland", "Denmark", "Switzerland", "France",
+      "Spain", "Italy", "Vatican City", "Turkiye", "Georgia", "Thailand",
+      "Cambodia", "Singapore", "Malaysia", "Indonesia",
+      "United States of America", "United Arab Emirates"
+    ],
+    "dhruv": [
+      "Iceland", "Norway", "Finland", "Denmark", "Switzerland", "France",
+      "Spain", "Turkiye", "Singapore", "Sri Lanka", "United States of America"
+    ]
+  }
+}

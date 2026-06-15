@@ -77,6 +77,17 @@ function Main() {
     return () => document.body.classList.remove("map-active");
   }, [view]);
 
+  if (!store.ready) {
+    return (
+      <div className="loading"><div style={{ textAlign: "center" }}>
+        <div className="spinner"></div>
+        <div className="load-note">Loading family data…</div>
+      </div></div>
+    );
+  }
+
+  const syncLabel = { loading: "Loading…", synced: "The family atlas", saving: "Saving…", offline: "Offline — local only" }[store.syncState] || "The family atlas";
+
   return (
     <div className="app">
       <div className="topbar">
@@ -84,7 +95,7 @@ function Main() {
           <div className="brand-mark"></div>
           <div>
             <h1>CountryTrack</h1>
-            <div className="sub">The family atlas</div>
+            <div className="sub"><span className={"sync-dot sync-" + store.syncState} title={store.syncState} />{syncLabel}</div>
           </div>
         </div>
         <nav className="nav">

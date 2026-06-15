@@ -1,5 +1,6 @@
-/* store.jsx — app state: visits per member, persistence, import/export */
+/* store.jsx — app state: visits per member, cloud + local persistence */
 const CT_KEY = "countrytrack.v2";
+const API = "/api/visits";
 
 function buildSeedVisits() {
   const { SEED_VISITS } = window.CT_DATA;
@@ -17,35 +18,127 @@ function buildSeedVisits() {
   return out;
 }
 
-function loadVisits() {
+function loadLocal() {
   try {
     const raw = localStorage.getItem(CT_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.visits) return parsed.visits;
+      if (parsed && parsed.visits) return { visits: parsed.visits, savedAt: parsed.savedAt || 0 };
     }
   } catch (e) { console.warn("[store] load failed", e); }
-  return buildSeedVisits();
+  return { visits: buildSeedVisits(), savedAt: 0 };
 }
 
 function useStore() {
   const members = window.CT_DATA.MEMBERS;
-  const [visits, setVisits] = useState(loadVisits);
+  const [visits, setVisits] = useState(null);
+  const [ready, setReady] = useState(false);
+  const [syncState, setSyncState] = useState("loading"); // loading | synced | saving | offline
+  const serverAt = useRef(0);
+  const saveTimer = useRef(null);
+  const skipSave = useRef(true);
 
-  // persist
+  const applyRemote = useCallback((data) => {
+    if (!data?.visits) return false;
+    const at = data.savedAt || 0;
+    if (at <= serverAt.current) return false;
+    serverAt.current = at;
+    skipSave.current = true;
+    setVisits(data.visits);
+    return true;
+  }, []);
+
+  const pull = useCallback(() => {
+    return fetch(API, { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data?.visits) {
+          applyRemote(data);
+          setSyncState("synced");
+          return true;
+        }
+        return false;
+      })
+      .catch(() => { setSyncState("offline"); return false; });
+  }, [applyRemote]);
+
   useEffect(() => {
-    try { localStorage.setItem(CT_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), visits })); }
-    catch (e) { console.warn("[store] save failed", e); }
-  }, [visits]);
+    fetch(API, { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data?.visits) {
+          serverAt.current = data.savedAt || 0;
+          setVisits(data.visits);
+          setSyncState("synced");
+        } else {
+          const local = loadLocal();
+          serverAt.current = local.savedAt;
+          setVisits(local.visits);
+          setSyncState("offline");
+        }
+      })
+      .catch(() => {
+        const local = loadLocal();
+        serverAt.current = local.savedAt;
+        setVisits(local.visits);
+        setSyncState("offline");
+      })
+      .finally(() => {
+        skipSave.current = false;
+        setReady(true);
+      });
+  }, []);
 
-  const isVisited = useCallback((mid, country) => (visits[mid] || []).includes(country), [visits]);
+  useEffect(() => {
+    if (!ready) return;
+    const iv = setInterval(pull, 20000);
+    const onVis = () => { if (document.visibilityState === "visible") pull(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
+  }, [ready, pull]);
+
+  useEffect(() => {
+    if (!visits || !ready) return;
+    try {
+      localStorage.setItem(CT_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), visits }));
+    } catch (e) { console.warn("[store] local save failed", e); }
+
+    if (skipSave.current) {
+      skipSave.current = false;
+      return;
+    }
+
+    clearTimeout(saveTimer.current);
+    setSyncState("saving");
+    saveTimer.current = setTimeout(() => {
+      const payload = { version: 1, savedAt: Date.now(), visits };
+      fetch(API, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+        .then(r => r.json().then(j => ({ ok: r.ok, j })))
+        .then(({ ok, j }) => {
+          if (ok && j?.savedAt) {
+            serverAt.current = j.savedAt;
+            setSyncState("synced");
+          } else {
+            setSyncState("offline");
+            if (j?.error) console.warn("[sync]", j.error);
+          }
+        })
+        .catch(() => setSyncState("offline"));
+    }, 700);
+  }, [visits, ready]);
+
+  const isVisited = useCallback((mid, country) => (visits?.[mid] || []).includes(country), [visits]);
 
   const visitorsOf = useCallback((country) =>
-    members.filter(m => (visits[m.id] || []).includes(country)).map(m => m.id), [visits, members]);
+    members.filter(m => (visits?.[m.id] || []).includes(country)).map(m => m.id), [visits, members]);
 
   const setMemberCountry = useCallback((mid, country, on) => {
     setVisits(prev => {
-      const cur = new Set(prev[mid] || []);
+      const cur = new Set(prev?.[mid] || []);
       if (on) cur.add(country); else cur.delete(country);
       return { ...prev, [mid]: [...cur] };
     });
@@ -53,7 +146,7 @@ function useStore() {
 
   const toggle = useCallback((mid, country) => {
     setVisits(prev => {
-      const cur = new Set(prev[mid] || []);
+      const cur = new Set(prev?.[mid] || []);
       if (cur.has(country)) cur.delete(country); else cur.add(country);
       return { ...prev, [mid]: [...cur] };
     });
@@ -77,10 +170,13 @@ function useStore() {
   }, [members]);
 
   const exportObj = useCallback(() => ({ version: 1, savedAt: Date.now(),
-    members: members.map(m => ({ id: m.id, name: m.name, color: m.color })), visits }), [visits, members]);
+    members: members.map(m => ({ id: m.id, name: m.name, color: m.color })), visits: visits || {} }), [visits, members]);
 
-  return { members, visits, isVisited, visitorsOf, setMemberCountry, toggle,
-    resetToSeed, clearAll, importVisits, exportObj };
+  return {
+    members, visits: visits || {}, ready, syncState, pull,
+    isVisited, visitorsOf, setMemberCountry, toggle,
+    resetToSeed, clearAll, importVisits, exportObj,
+  };
 }
 
 window.useStore = useStore;
