@@ -2,8 +2,10 @@
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
-  const hasBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN || "";
+  const hasBlob = blobToken.length > 0;
   const hasGitHub = !!process.env.GITHUB_TOKEN;
+  const blobPreview = hasBlob ? blobToken.slice(0, 20) + "…" : null;
 
   let blobRead = null;
   if (hasBlob) {
@@ -17,7 +19,7 @@ module.exports = async function handler(req, res) {
   }
 
   res.status(200).json({
-    env: { BLOB_READ_WRITE_TOKEN: hasBlob, GITHUB_TOKEN: hasGitHub },
+    env: { BLOB_READ_WRITE_TOKEN: hasBlob, tokenPreview: blobPreview, GITHUB_TOKEN: hasGitHub },
     blob: blobRead,
   });
 };

@@ -166,7 +166,7 @@ button { font-family: inherit; cursor: pointer; }
   gap: 10px;
 }
 .globe-atlas-wrap { grid-area: atlas; justify-self: start; align-self: start; pointer-events: auto; }
-.globe-search-wrap { grid-area: search; justify-self: center; align-self: start; width: 100%; max-width: 340px; pointer-events: auto; }
+.globe-search-wrap { grid-area: search; justify-self: center; align-self: start; width: 100%; max-width: 340px; pointer-events: auto; min-width: 0; }
 .globe-legend-wrap { grid-area: legend; justify-self: end; align-self: start; pointer-events: auto; max-width: min(100%, 420px); }
 .globe-hint-wrap { grid-area: hint; justify-self: center; align-self: end; pointer-events: none; }
 
@@ -433,12 +433,13 @@ button { font-family: inherit; cursor: pointer; }
       "atlas"
       "."
       "hint";
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto 1fr auto;
     gap: 8px;
   }
-  .globe-search-wrap { max-width: none; width: 100%; }
-  .globe-legend-wrap { max-width: none; width: 100%; }
+  .globe-search-wrap { max-width: 100% !important; width: 100%; justify-self: stretch; }
+  .globe-legend-wrap { max-width: 100%; justify-self: stretch; }
+  .globe-atlas-wrap { justify-self: stretch; }
 }
 
 @media (max-width: 820px) {
