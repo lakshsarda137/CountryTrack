@@ -45,6 +45,7 @@ function useStore() {
     serverAt.current = at;
     skipSave.current = true;
     setVisits(data.visits);
+    try { localStorage.setItem(CT_KEY, JSON.stringify({ version: 1, savedAt: at, visits: data.visits })); } catch (e) {}
     return true;
   }, []);
 
@@ -69,17 +70,14 @@ function useStore() {
         const local = loadLocal();
         if (data?.visits && (data.savedAt || 0) >= local.savedAt) {
           serverAt.current = data.savedAt || 0;
+          skipSave.current = true;
           setVisits(data.visits);
           setSyncState("synced");
-        } else if (local.visits) {
+        } else {
           serverAt.current = local.savedAt;
+          skipSave.current = false;
           setVisits(local.visits);
           setSyncState(data?.visits ? "synced" : "offline");
-          if (data?.visits && local.savedAt > (data.savedAt || 0)) {
-            skipSave.current = false;
-          }
-        } else {
-          setSyncState("offline");
         }
       })
       .catch(() => {

@@ -161,7 +161,7 @@ button { font-family: inherit; cursor: pointer; }
     ". . ."
     "hint hint hint";
   grid-template-rows: auto 1fr auto;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 340px) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 340px) minmax(0, 1fr);
   padding: 14px 16px 16px;
   gap: 10px;
 }
