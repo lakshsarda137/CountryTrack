@@ -8,20 +8,19 @@ Family travel atlas — track countries visited on an interactive globe and flat
 python3 -m http.server 8000
 ```
 
-Open [http://localhost:8000](http://localhost:8000).
+Open [http://localhost:8000](http://localhost:8000). Cloud sync requires deploying to Vercel with env vars (see below).
 
 ## Deploy on Vercel
 
-Import this repo in [Vercel](https://vercel.com/new). No build step is required — it deploys as a static site with serverless API routes.
+1. Import **[github.com/lakshsarda137/CountryTrack](https://github.com/lakshsarda137/CountryTrack)** at [vercel.com/new](https://vercel.com/new).
+2. No build command — deploy as static site + serverless API.
+3. **Set up sync** so laptop and phone share data → follow **[SYNC.md](./SYNC.md)** step by step.
 
-### Cross-device sync (required for laptop ↔ phone)
+Quick summary:
 
-Edits sync via `/api/visits`. Configure **one or both** in Vercel → Project → Settings → Environment Variables:
+| Variable | Where the value comes from |
+|----------|----------------------------|
+| `BLOB_READ_WRITE_TOKEN` | Auto-created when you add a **Blob** store in Vercel and connect it to the project (Storage tab). |
+| `GITHUB_TOKEN` | You create at [github.com/settings/tokens](https://github.com/settings/tokens) — fine-grained, **Contents: Read and write** on this repo only. Paste into Vercel env vars. |
 
-1. **`BLOB_READ_WRITE_TOKEN`** — [Create a Blob store](https://vercel.com/docs/storage/vercel-blob) in your Vercel project (instant sync, no deploy wait).
-
-2. **`GITHUB_TOKEN`** — GitHub PAT with `Contents: Read and write` on this repo. Commits `data/visits.json` and triggers a redeploy (backup + static fallback).
-
-Optional: `GITHUB_OWNER`, `GITHUB_REPO` (defaults to `lakshsarda137/CountryTrack`).
-
-After adding env vars, redeploy once. All devices poll every 20s and refresh when you switch back to the tab.
+After adding variables, **Redeploy** once.

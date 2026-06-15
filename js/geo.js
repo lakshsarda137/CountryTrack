@@ -31,15 +31,15 @@
 
   const norm = (s) => String(s || "").trim().toLowerCase();
 
-  // ---- visit colors: fill = heat by count, border = who went ---------------
+  // Fill = cool → warm by visitor count. glow = emissive edge on globe / flat map.
   const HEAT_SCALE = [
     null,
-    { fill: "#4A2820", glow: "#8B4830" },
-    { fill: "#7A4020", glow: "#B85A28" },
-    { fill: "#B8561A", glow: "#E07030" },
-    { fill: "#E06A00", glow: "#FF9220" },
+    { fill: "#C8A84B", glow: "#F0D070" },  // 1 — straw
+    { fill: "#D4722A", glow: "#F09050" },  // 2 — amber
+    { fill: "#C04020", glow: "#E86040" },  // 3 — orange-red
+    { fill: "#A01830", glow: "#E04060" },  // 4 — crimson
   ];
-  const HOME_COLORS = { fill: "#C9922E", glow: "#FFD060", stroke: "#FFE08A" };
+  const HOME_COLORS = { fill: "#2A6B5E", glow: "#43B98D", stroke: "#5CB89E" };
 
   function isHomeCountry(name) {
     return norm(name) === norm(window.CT_DATA.HOME_COUNTRY);
@@ -56,7 +56,7 @@
     return HEAT_SCALE[n].glow;
   }
 
-  /** Fill + glow from visitor count; borders use member colors separately. */
+  /** Fill + glow from visitor count only — no per-member borders on the map. */
   function visitFill(count, name) {
     if (isHomeCountry(name)) return HOME_COLORS.fill;
     return heatFill(count);

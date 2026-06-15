@@ -153,19 +153,18 @@ function FlatMap({ store, active, onSelectCountry }) {
       return {
         fill: window.GEO.HOME_COLORS.fill,
         glow: window.GEO.HOME_COLORS.glow,
-        stroke: window.GEO.HOME_COLORS.stroke,
-        mems: visMembersOf(name),
-        home: true,
+        n: visMembersOf(name).length || 1,
+        visited: true,
       };
     }
     const mems = visMembersOf(name);
     const n = mems.length;
-    if (!n) return { fill: "oklch(0.27 0.012 60)", glow: null, mems: [], home: false };
+    if (!n) return { fill: "oklch(0.27 0.012 60)", glow: null, n: 0, visited: false };
     return {
       fill: window.GEO.visitFill(n, name),
       glow: window.GEO.visitGlow(n, name),
-      mems,
-      home: false,
+      n,
+      visited: true,
     };
   };
 
@@ -173,10 +172,11 @@ function FlatMap({ store, active, onSelectCountry }) {
     const mems = visMembersOf(p.name);
     if (!mems.length && !window.GEO.isHomeCountry(p.name)) return null;
     const n = mems.length || 1;
+    const glow = window.GEO.isHomeCountry(p.name) ? window.GEO.HOME_COLORS.glow : window.GEO.visitGlow(n, p.name);
     return {
       ...p,
       fill: window.GEO.isHomeCountry(p.name) ? window.GEO.HOME_COLORS.fill : window.GEO.visitFill(n, p.name),
-      stroke: window.GEO.isHomeCountry(p.name) ? window.GEO.HOME_COLORS.stroke : (mems[0]?.color || window.GEO.visitGlow(n, p.name)),
+      glow,
     };
   }).filter(Boolean);
 
@@ -186,7 +186,7 @@ function FlatMap({ store, active, onSelectCountry }) {
 
   return (
     <div className="map-view" ref={wrapRef}>
-      <window.MapLegend members={store.members} />
+      <window.MapLegend />
       <div className="map-search">
         <window.SearchBox store={store} onSelect={onSelect} placeholder="Search countries…" />
       </div>
@@ -208,45 +208,29 @@ function FlatMap({ store, active, onSelectCountry }) {
           <path className="map-graticule" d={graticule} vectorEffect="non-scaling-stroke" />
           {paths.map(p => {
             const st = styleFor(p.name);
-            const n = st.mems.length;
-            const borderW = 2.2 / t.k;
+            const glowPx = st.glow ? Math.min(4, 1 + st.n * 0.6) : 0;
+            const glowAlpha = st.glow ? Math.min(0.55, 0.25 + st.n * 0.07) : 0;
             return (
               <g key={p.name} className="country-group">
                 <path className="country country-fill" d={p.d} fill={st.fill} vectorEffect="non-scaling-stroke"
-                  style={st.glow ? { filter: `drop-shadow(0 0 ${2 + (n || 1) * 1.2}px ${st.glow})` } : undefined}
+                  style={st.glow ? { filter: `drop-shadow(0 0 ${glowPx}px ${window.GEO.withAlpha(st.glow, glowAlpha)}) brightness(1.08)` } : undefined}
                   onClick={() => onSelect(p.name)}
                   onMouseEnter={(e) => setHover({ name: p.name, x: e.clientX, y: e.clientY })}
                 />
-                {st.home && (
-                  <path className="country-stroke country-stroke-home" d={p.d} fill="none"
-                    stroke={st.stroke} strokeWidth={borderW * 1.3} vectorEffect="non-scaling-stroke" pointerEvents="none" />
-                )}
-                {!st.home && n === 1 && (
-                  <path className="country-stroke" d={p.d} fill="none" stroke={st.mems[0].color}
-                    strokeWidth={borderW} vectorEffect="non-scaling-stroke" pointerEvents="none" />
-                )}
-                {!st.home && n > 1 && st.mems.map((m, i, arr) => {
-                  const seg = p.pathLen / arr.length;
-                  return (
-                    <path key={m.id} className="country-stroke" d={p.d} fill="none" stroke={m.color}
-                      strokeWidth={borderW} strokeDasharray={`${seg} ${p.pathLen - seg}`}
-                      strokeDashoffset={-i * seg} vectorEffect="non-scaling-stroke" pointerEvents="none" />
-                  );
-                })}
               </g>
             );
           })}
           {markers.map(m => (
             <circle key={m.name} cx={m.cx} cy={m.cy} r={5 / t.k} fill={m.fill}
-              stroke={m.stroke || "#fff"} strokeOpacity="0.7" strokeWidth={1.2} vectorEffect="non-scaling-stroke"
-              style={{ cursor: "pointer", filter: m.fill ? `drop-shadow(0 0 4px ${m.fill})` : undefined }}
+              stroke="none"
+              style={{ cursor: "pointer", filter: m.glow ? `drop-shadow(0 0 6px ${m.glow})` : undefined }}
               onClick={() => onSelect(m.name)} />
           ))}
           {focusRec && (
-            <path className="country-focus" d={focusRec.d} fill="none" stroke="var(--gold)" strokeWidth="2.4" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+            <path className="country-focus" d={focusRec.d} fill="none" stroke="rgba(180,210,230,0.85)" strokeWidth="2" vectorEffect="non-scaling-stroke" pointerEvents="none" />
           )}
           {focusRec && byName[focused].tiny && (
-            <circle cx={focusRec.cx} cy={focusRec.cy} r={11 / t.k} fill="none" stroke="var(--gold)" strokeWidth="2" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+            <circle cx={focusRec.cx} cy={focusRec.cy} r={11 / t.k} fill="none" stroke="rgba(180,210,230,0.85)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" pointerEvents="none" />
           )}
         </g>
       </svg>
