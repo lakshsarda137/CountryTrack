@@ -66,14 +66,19 @@ function useStore() {
     fetch(API, { cache: "no-store" })
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
-        if (data?.visits) {
+        const local = loadLocal();
+        if (data?.visits && (data.savedAt || 0) >= local.savedAt) {
           serverAt.current = data.savedAt || 0;
           setVisits(data.visits);
           setSyncState("synced");
-        } else {
-          const local = loadLocal();
+        } else if (local.visits) {
           serverAt.current = local.savedAt;
           setVisits(local.visits);
+          setSyncState(data?.visits ? "synced" : "offline");
+          if (data?.visits && local.savedAt > (data.savedAt || 0)) {
+            skipSave.current = false;
+          }
+        } else {
           setSyncState("offline");
         }
       })
