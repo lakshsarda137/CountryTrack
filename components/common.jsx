@@ -45,9 +45,42 @@ const CONTINENTS = [
 
 const fmt = (n) => n.toLocaleString("en-IN");
 
+function MapLegend({ members }) {
+  return (
+    <div className="map-legend">
+      <div className="map-legend-block">
+        <div className="map-legend-label">Fill · how many visited</div>
+        <div className="heat-legend">
+          {[1, 2, 3, 4].map(n => (
+            <div className="heat-legend-item" key={n}>
+              <span className="heat-legend-swatch" style={{ background: window.GEO.heatFill(n), boxShadow: `0 0 8px ${window.GEO.heatGlow(n)}` }} />
+              <span className="heat-legend-n">{n}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="map-legend-block">
+        <div className="map-legend-label">Border · who went</div>
+        <div className="stroke-legend">
+          {members.map(m => (
+            <div className="stroke-legend-item" key={m.id}>
+              <span className="stroke-legend-bar" style={{ background: m.color }} />
+              {m.name}
+            </div>
+          ))}
+          <div className="stroke-legend-item">
+            <span className="stroke-legend-bar stroke-legend-home" />
+            Home
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // age from an ISO birthdate (YYYY-MM-DD)
 const ageYears = (birth) => { if (!birth) return null; return (Date.now() - new Date(birth).getTime()) / (365.25 * 24 * 3600 * 1000); };
 const ageInt = (birth) => { const a = ageYears(birth); return a == null ? null : Math.floor(a); };
 
-Object.assign(window, { Icon, Icons, Avatar, initials, CONTINENTS, fmt, ageYears, ageInt,
+Object.assign(window, { Icon, Icons, Avatar, initials, CONTINENTS, fmt, MapLegend, ageYears, ageInt,
   useState, useEffect, useRef, useMemo, useCallback });

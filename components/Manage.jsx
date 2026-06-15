@@ -97,9 +97,10 @@ function Manage({ store, active, onToast }) {
           {rows.length === 0 && <div className="empty">No countries match.</div>}
           {rows.map(c => {
             const home = isHome(c.name);
+            const visCount = store.members.filter(m => store.isVisited(m.id, c.name)).length;
             const fill = home
-              ? "var(--gold)"
-              : window.GEO.blendColors(store.members.filter(m => store.isVisited(m.id, c.name)).map(m => m.color));
+              ? window.GEO.HOME_COLORS.fill
+              : (visCount ? window.GEO.visitFill(visCount, c.name) : null);
             return (
               <div key={c.name} className={"row" + (home ? " row-home" : "")}>
                 <div className="cname">

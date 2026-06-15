@@ -10,15 +10,16 @@ function CountryEditor({ countryName, store, onClose }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const blended = window.GEO.blendColors(
-    store.members.filter(m => visitors.includes(m.id)).map(m => m.color)
-  );
+  const n = visitors.length;
+  const fillColor = window.GEO.isHomeCountry(countryName)
+    ? window.GEO.HOME_COLORS.fill
+    : (n ? window.GEO.visitFill(n, countryName) : null);
 
   return (
     <div className="modal-scrim" onClick={onClose}>
       <div className="editor" onClick={(e) => e.stopPropagation()}>
         <div className="editor-head">
-          <div className="flag" style={{ background: blended ? window.GEO.withAlpha(blended, 0.22) : "var(--bg)", color: blended || "var(--muted)", borderColor: blended ? blended : "var(--border)" }}>
+          <div className="flag" style={{ background: fillColor ? window.GEO.withAlpha(fillColor, 0.22) : "var(--bg)", color: fillColor || "var(--muted)", borderColor: fillColor ? fillColor : "var(--border)" }}>
             {rec ? (rec.iso || window.initials(countryName)) : "??"}
           </div>
           <div style={{ flex: 1 }}>

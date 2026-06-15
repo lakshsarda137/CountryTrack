@@ -55,11 +55,19 @@ function FlatMap({ store, active, onSelectCountry }) {
     const sphere = { type: "Sphere" };
     const bounds = gp.bounds(sphere);
     const byName = {};
+    const measureEl = typeof document !== "undefined"
+      ? document.createElementNS("http://www.w3.org/2000/svg", "path") : null;
     const paths = fc.features.map(f => {
       const b = gp.bounds(f);
       const maxDim = Math.max(b[1][0] - b[0][0], b[1][1] - b[0][1]);
       const c = projection(d3.geoCentroid(f)) || [0, 0];
-      const rec = { name: f.__name, d: gp(f), cx: c[0], cy: c[1], tiny: maxDim < 5 };
+      const d = gp(f);
+      let pathLen = 200;
+      if (measureEl && d) {
+        measureEl.setAttribute("d", d);
+        pathLen = measureEl.getTotalLength() || 200;
+      }
+      const rec = { name: f.__name, d, cx: c[0], cy: c[1], tiny: maxDim < 5, pathLen };
       byName[f.__name] = rec;
       return rec;
     }).filter(p => p.d);
@@ -135,15 +143,41 @@ function FlatMap({ store, active, onSelectCountry }) {
 
   const onSelect = (name) => { flyTo(name); onSelectCountry(name); };
 
-  const fillFor = (name) => {
-    const vis = store.visitorsOf(name).filter(id => active.has(id));
-    if (vis.length === 0) return "oklch(0.27 0.012 60)";
-    return window.GEO.blendColors(store.members.filter(m => vis.includes(m.id)).map(m => m.color));
+  const visMembersOf = (name) => {
+    const ids = store.visitorsOf(name).filter(id => active.has(id));
+    return store.members.filter(m => ids.includes(m.id));
+  };
+
+  const styleFor = (name) => {
+    if (window.GEO.isHomeCountry(name)) {
+      return {
+        fill: window.GEO.HOME_COLORS.fill,
+        glow: window.GEO.HOME_COLORS.glow,
+        stroke: window.GEO.HOME_COLORS.stroke,
+        mems: visMembersOf(name),
+        home: true,
+      };
+    }
+    const mems = visMembersOf(name);
+    const n = mems.length;
+    if (!n) return { fill: "oklch(0.27 0.012 60)", glow: null, mems: [], home: false };
+    return {
+      fill: window.GEO.visitFill(n, name),
+      glow: window.GEO.visitGlow(n, name),
+      mems,
+      home: false,
+    };
   };
 
   const markers = paths.filter(p => p.tiny).map(p => {
-    const vis = store.visitorsOf(p.name).filter(id => active.has(id));
-    return vis.length ? { ...p, fill: window.GEO.blendColors(store.members.filter(m => vis.includes(m.id)).map(m => m.color)) } : null;
+    const mems = visMembersOf(p.name);
+    if (!mems.length && !window.GEO.isHomeCountry(p.name)) return null;
+    const n = mems.length || 1;
+    return {
+      ...p,
+      fill: window.GEO.isHomeCountry(p.name) ? window.GEO.HOME_COLORS.fill : window.GEO.visitFill(n, p.name),
+      stroke: window.GEO.isHomeCountry(p.name) ? window.GEO.HOME_COLORS.stroke : (mems[0]?.color || window.GEO.visitGlow(n, p.name)),
+    };
   }).filter(Boolean);
 
   const hoverRec = hover && idx.byName.get(window.GEO.norm(hover.name));
@@ -152,6 +186,7 @@ function FlatMap({ store, active, onSelectCountry }) {
 
   return (
     <div className="map-view" ref={wrapRef}>
+      <window.MapLegend members={store.members} />
       <div className="map-search">
         <window.SearchBox store={store} onSelect={onSelect} placeholder="Search countries…" />
       </div>
@@ -171,16 +206,41 @@ function FlatMap({ store, active, onSelectCountry }) {
         <g ref={gRef}>
           <path d={spherePath} fill="url(#oceanGrad)" stroke="oklch(0.33 0.02 240)" strokeWidth="0.8" vectorEffect="non-scaling-stroke" />
           <path className="map-graticule" d={graticule} vectorEffect="non-scaling-stroke" />
-          {paths.map(p => (
-            <path key={p.name} className="country" d={p.d} fill={fillFor(p.name)} vectorEffect="non-scaling-stroke"
-              onClick={() => onSelect(p.name)}
-              onMouseEnter={(e) => setHover({ name: p.name, x: e.clientX, y: e.clientY })}
-            />
-          ))}
+          {paths.map(p => {
+            const st = styleFor(p.name);
+            const n = st.mems.length;
+            const borderW = 2.2 / t.k;
+            return (
+              <g key={p.name} className="country-group">
+                <path className="country country-fill" d={p.d} fill={st.fill} vectorEffect="non-scaling-stroke"
+                  style={st.glow ? { filter: `drop-shadow(0 0 ${2 + (n || 1) * 1.2}px ${st.glow})` } : undefined}
+                  onClick={() => onSelect(p.name)}
+                  onMouseEnter={(e) => setHover({ name: p.name, x: e.clientX, y: e.clientY })}
+                />
+                {st.home && (
+                  <path className="country-stroke country-stroke-home" d={p.d} fill="none"
+                    stroke={st.stroke} strokeWidth={borderW * 1.3} vectorEffect="non-scaling-stroke" pointerEvents="none" />
+                )}
+                {!st.home && n === 1 && (
+                  <path className="country-stroke" d={p.d} fill="none" stroke={st.mems[0].color}
+                    strokeWidth={borderW} vectorEffect="non-scaling-stroke" pointerEvents="none" />
+                )}
+                {!st.home && n > 1 && st.mems.map((m, i, arr) => {
+                  const seg = p.pathLen / arr.length;
+                  return (
+                    <path key={m.id} className="country-stroke" d={p.d} fill="none" stroke={m.color}
+                      strokeWidth={borderW} strokeDasharray={`${seg} ${p.pathLen - seg}`}
+                      strokeDashoffset={-i * seg} vectorEffect="non-scaling-stroke" pointerEvents="none" />
+                  );
+                })}
+              </g>
+            );
+          })}
           {markers.map(m => (
             <circle key={m.name} cx={m.cx} cy={m.cy} r={5 / t.k} fill={m.fill}
-              stroke="#fff" strokeOpacity="0.5" strokeWidth={1} vectorEffect="non-scaling-stroke"
-              style={{ cursor: "pointer" }} onClick={() => onSelect(m.name)} />
+              stroke={m.stroke || "#fff"} strokeOpacity="0.7" strokeWidth={1.2} vectorEffect="non-scaling-stroke"
+              style={{ cursor: "pointer", filter: m.fill ? `drop-shadow(0 0 4px ${m.fill})` : undefined }}
+              onClick={() => onSelect(m.name)} />
           ))}
           {focusRec && (
             <path className="country-focus" d={focusRec.d} fill="none" stroke="var(--gold)" strokeWidth="2.4" vectorEffect="non-scaling-stroke" pointerEvents="none" />

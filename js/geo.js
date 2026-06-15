@@ -31,82 +31,59 @@
 
   const norm = (s) => String(s || "").trim().toLowerCase();
 
-  // ---- color blending (heat: saturation rises with visitors, not brightness) ----
-  function hexToRgb(hex) {
-    const h = hex.replace("#", "");
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-  }
-  function rgbToHex([r, g, b]) {
-    const c = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
-    return "#" + c(r) + c(g) + c(b);
-  }
-  function rgbToHsl(r, g, b) {
-    r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h = 0, s = 0;
-    const l = (max + min) / 2;
-    if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-      else if (max === g) h = ((b - r) / d + 2) / 6;
-      else h = ((r - g) / d + 4) / 6;
-    }
-    return [h * 360, s, l];
-  }
-  function hslToRgb(h, s, l) {
-    h = (((h % 360) + 360) % 360) / 360;
-    if (s === 0) { const v = Math.round(l * 255); return [v, v, v]; }
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    const hue = (t) => {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1 / 6) return p + (q - p) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-      return p;
-    };
-    return [Math.round(hue(h + 1 / 3) * 255), Math.round(hue(h) * 255), Math.round(hue(h - 1 / 3) * 255)];
-  }
-  function hexToHsl(hex) {
-    const [r, g, b] = hexToRgb(hex);
-    return rgbToHsl(r, g, b);
-  }
-  function hslToHex(h, s, l) {
-    return rgbToHex(hslToRgb(h, s, l));
-  }
-  function meanHue(hsls) {
-    let x = 0, y = 0;
-    for (const [h, s] of hsls) {
-      const w = Math.max(0.08, s);
-      const rad = h * Math.PI / 180;
-      x += Math.cos(rad) * w;
-      y += Math.sin(rad) * w;
-    }
-    if (!x && !y) return hsls[0][0];
-    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  // ---- visit colors: fill = heat by count, border = who went ---------------
+  const HEAT_SCALE = [
+    null,
+    { fill: "#4A2820", glow: "#8B4830" },
+    { fill: "#7A4020", glow: "#B85A28" },
+    { fill: "#B8561A", glow: "#E07030" },
+    { fill: "#E06A00", glow: "#FF9220" },
+  ];
+  const HOME_COLORS = { fill: "#C9922E", glow: "#FFD060", stroke: "#FFE08A" };
+
+  function isHomeCountry(name) {
+    return norm(name) === norm(window.CT_DATA.HOME_COUNTRY);
   }
 
-  const FAMILY_GOLD = "#D4A017";
+  function heatFill(count) {
+    const n = Math.max(0, Math.min(4, count || 0));
+    if (!n) return null;
+    return HEAT_SCALE[n].fill;
+  }
 
-  // More visitors => richer saturation (heat), never screen-blended white.
+  function heatGlow(count) {
+    const n = Math.max(1, Math.min(4, count || 1));
+    return HEAT_SCALE[n].glow;
+  }
+
+  /** Fill + glow from visitor count; borders use member colors separately. */
+  function visitFill(count, name) {
+    if (isHomeCountry(name)) return HOME_COLORS.fill;
+    return heatFill(count);
+  }
+
+  function visitGlow(count, name) {
+    if (isHomeCountry(name)) return HOME_COLORS.glow;
+    return count > 0 ? heatGlow(count) : null;
+  }
+
+  function visitStroke(name) {
+    return isHomeCountry(name) ? HOME_COLORS.stroke : null;
+  }
+
+  // Legacy helper — manage list swatch only uses heat, not member hue mash.
   function blendColors(hexes) {
     if (!hexes || hexes.length === 0) return null;
-    const n = hexes.length;
-    if (n === 1) {
-      const [h, s, l] = hexToHsl(hexes[0]);
-      return hslToHex(h, s * 0.8, l);
-    }
-    if (n >= 4) return FAMILY_GOLD;
-    const hsls = hexes.map(hexToHsl);
-    const h = meanHue(hsls);
-    const s = Math.min(0.9, 0.5 + n * 0.14);
-    return hslToHex(h, s, 0.47);
+    return heatFill(Math.min(4, hexes.length));
   }
   function withAlpha(hex, a) {
     const [r, g, b] = hexToRgb(hex);
     return `rgba(${r},${g},${b},${a})`;
+  }
+
+  function hexToRgb(hex) {
+    const h = hex.replace("#", "");
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
   }
 
   // ---- haversine ------------------------------------------------------
@@ -240,6 +217,14 @@
     resolveName,
     isOfficialName,
     officialContinentOf,
+    isHomeCountry,
+    heatFill,
+    heatGlow,
+    visitFill,
+    visitGlow,
+    visitStroke,
+    HEAT_SCALE,
+    HOME_COLORS,
     blendColors,
     withAlpha,
     hexToRgb,

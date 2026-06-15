@@ -11,32 +11,71 @@ function GlobeView({ store, active, onSelectCountry }) {
 
   stateRef.current = { store, active, onSelectCountry, focused };
 
-  const visIds = (name) => stateRef.current.store.visitorsOf(name).filter(id => stateRef.current.active.has(id));
-  const blendOf = (name) => {
-    const v = visIds(name);
-    return v.length ? window.GEO.blendColors(store.members.filter(m => v.includes(m.id)).map(m => m.color)) : null;
+  const visMembers = (name) => {
+    const ids = stateRef.current.store.visitorsOf(name).filter(id => stateRef.current.active.has(id));
+    return store.members.filter(m => ids.includes(m.id));
   };
 
-  const capColor = (feat) => { const b = blendOf(feat.__name); return b ? window.GEO.withAlpha(b, 0.92) : "rgba(120,110,95,0.04)"; };
-  const sideColor = (feat) => { const b = blendOf(feat.__name); return b ? window.GEO.withAlpha(b, 0.25) : "rgba(0,0,0,0)"; };
-  const strokeColor = (feat) => (feat.__name === stateRef.current.focused ? "#FFE08A" : "rgba(255,255,255,0.10)");
+  const visitCount = (name) => visMembers(name).length;
+
+  const capColor = (feat) => {
+    const name = feat.__name;
+    if (window.GEO.isHomeCountry(name)) return window.GEO.withAlpha(window.GEO.HOME_COLORS.fill, 0.95);
+    const n = visitCount(name);
+    const fill = window.GEO.visitFill(n, name);
+    return fill ? window.GEO.withAlpha(fill, 0.92) : "rgba(120,110,95,0.04)";
+  };
+
+  const sideColor = (feat) => {
+    const name = feat.__name;
+    const n = visitCount(name);
+    if (!n && !window.GEO.isHomeCountry(name)) return "rgba(0,0,0,0)";
+    const glow = window.GEO.visitGlow(n || 1, name);
+    return glow ? window.GEO.withAlpha(glow, 0.55) : "rgba(0,0,0,0)";
+  };
+
+  const strokeColor = (feat) => {
+    const name = feat.__name;
+    if (name === stateRef.current.focused) return "#FFE08A";
+    if (window.GEO.isHomeCountry(name)) return window.GEO.HOME_COLORS.stroke;
+    const mems = visMembers(name);
+    if (mems.length === 1) return mems[0].color;
+    if (mems.length > 1) return window.GEO.visitGlow(mems.length, name);
+    return "rgba(255,255,255,0.10)";
+  };
+
+  const strokeWidth = (feat) => {
+    const name = feat.__name;
+    if (window.GEO.isHomeCountry(name)) return 1.8;
+    const n = visitCount(name);
+    if (!n) return 0.35;
+    if (n === 1) return 1.2;
+    return 0.9 + n * 0.25;
+  };
+
+  const polyAltitude = (feat) => {
+    const name = feat.__name;
+    if (window.GEO.isHomeCountry(name)) return 0.022;
+    const n = visitCount(name);
+    return n ? 0.01 + n * 0.004 : 0.012;
+  };
+
   const polyLabel = (feat) => {
     const name = feat.__name;
     const rec = idx.byName.get(window.GEO.norm(name));
-    const v = visIds(name);
-    const chips = store.members.filter(m => v.includes(m.id))
-      .map(m => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${m.color};margin-right:3px"></span>`).join("");
+    const mems = visMembers(name);
+    const homeTag = window.GEO.isHomeCountry(name) ? `<span style="color:#FFE08A;font-size:10px;margin-left:6px">HOME</span>` : "";
+    const chips = mems.map(m => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${m.color};margin-right:3px"></span>`).join("");
     return `<div style="font-family:var(--font-body);background:rgba(22,20,17,.95);border:1px solid #4a443a;border-radius:9px;padding:8px 11px;box-shadow:0 10px 30px -10px #000">
-      <div style="font-weight:600;font-family:var(--font-display)">${name}</div>
+      <div style="font-weight:600;font-family:var(--font-display)">${name}${homeTag}</div>
       <div style="color:#8a8275;font-size:11px;margin-top:2px">${rec ? rec.continent : ""}${rec ? " · " + Math.round(rec.distanceFromHome).toLocaleString() + " km" : ""}</div>
-      <div style="margin-top:6px;font-size:11px;color:#cfc7b8">${v.length ? chips + " " + v.length + " visited" : "Click to add"}</div>
+      <div style="margin-top:6px;font-size:11px;color:#cfc7b8">${mems.length ? chips + " " + mems.length + " visited" : "Click to add"}</div>
     </div>`;
   };
 
-  // microstate markers: visited countries NOT present in the light globe geometry
   const buildPoints = () => {
     const home = window.CT_DATA.HOME;
-    const pts = [{ lat: home.lat, lng: home.lng, type: "home", color: "#FFE08A", r: 0.55 }];
+    const pts = [{ lat: home.lat, lng: home.lng, type: "home", color: window.GEO.HOME_COLORS.glow, r: 0.55 }];
     const seen = new Set();
     store.members.forEach(m => {
       if (!stateRef.current.active.has(m.id)) return;
@@ -45,11 +84,16 @@ function GlobeView({ store, active, onSelectCountry }) {
         seen.add(name);
         const rec = idx.byName.get(window.GEO.norm(name));
         if (!rec) return;
-        pts.push({ lat: rec.lat, lng: rec.lng, type: "mark", name, color: blendOf(name) || "#E3B23C", r: 0.42 });
+        const n = visitCount(name);
+        pts.push({
+          lat: rec.lat, lng: rec.lng, type: "mark", name,
+          color: window.GEO.visitGlow(n, name) || "#E3B23C", r: 0.42,
+        });
       });
     });
     return pts;
   };
+
   const buildRings = () => {
     const home = window.CT_DATA.HOME;
     const rings = [{ lat: home.lat, lng: home.lng, type: "home" }];
@@ -65,9 +109,10 @@ function GlobeView({ store, active, onSelectCountry }) {
       .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
       .bumpImageUrl("https://unpkg.com/three-globe/example/img/earth-topology.png")
       .showAtmosphere(true).atmosphereColor("#E3B23C").atmosphereAltitude(0.18)
-      .polygonsData([]).polygonAltitude(0.012)
+      .polygonsData([]).polygonAltitude(polyAltitude)
       .polygonCapColor(capColor).polygonSideColor(sideColor)
-      .polygonStrokeColor(strokeColor).polygonLabel(polyLabel)
+      .polygonStrokeColor(strokeColor).polygonStrokeWidth(strokeWidth)
+      .polygonLabel(polyLabel)
       .polygonsTransitionDuration(0)
       .onPolygonClick((feat) => { setFocused(feat.__name); stateRef.current.onSelectCountry(feat.__name); })
       .pointLat("lat").pointLng("lng").pointColor("color").pointAltitude(0.015).pointRadius("r")
@@ -104,10 +149,10 @@ function GlobeView({ store, active, onSelectCountry }) {
     };
   }, []);
 
-  // refresh data-driven accessors + markers
   useEffect(() => {
     const g = globeRef.current; if (!g) return;
-    g.polygonCapColor(capColor).polygonSideColor(sideColor).polygonStrokeColor(strokeColor).polygonLabel(polyLabel);
+    g.polygonAltitude(polyAltitude).polygonCapColor(capColor).polygonSideColor(sideColor)
+      .polygonStrokeColor(strokeColor).polygonStrokeWidth(strokeWidth).polygonLabel(polyLabel);
     g.pointsData(buildPoints()).ringsData(buildRings());
   }, [store.visits, active, focused, gReady]);
 
@@ -129,6 +174,7 @@ function GlobeView({ store, active, onSelectCountry }) {
   return (
     <div className="globe-wrap">
       <div ref={elRef} className="globe-canvas"></div>
+      <window.MapLegend members={store.members} />
       <div className="globe-search"><window.SearchBox store={store} onSelect={focusOn} placeholder="Find a country…" /></div>
       <div className="globe-overlay">
         <div className="card atlas-card">
