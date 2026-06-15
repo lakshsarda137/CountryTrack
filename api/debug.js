@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
       const { blobs } = await list({ prefix: "countrytrack/", token: blobToken });
       blobRead = { ok: true, count: blobs.length };
       const result = await put("countrytrack/debug-test.json", JSON.stringify({ t: Date.now() }), {
-        access: "public", addRandomSuffix: false, allowOverwrite: true,
+        access: "private", addRandomSuffix: false, allowOverwrite: true,
         contentType: "application/json", token: blobToken,
       });
       blobWrite = { ok: true, url: result.url };
