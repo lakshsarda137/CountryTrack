@@ -121,10 +121,32 @@ module.exports = async function handler(req, res) {
     if (!body?.visits || typeof body.visits !== "object") {
       return res.status(400).json({ error: "Missing visits object" });
     }
+    // Merge: for each member, use whichever version (server or incoming) has the newer memberSavedAt.
+    // Client sends memberSavedAt per member so we don't overwrite an edit from another device.
+    const current = await readBlob().catch(() => null);
+    const currentMemberAt = current?.memberSavedAt || {};
+    const incomingMemberAt = body.memberSavedAt || {};
+    const merged = {};
+    const memberSavedAt = { ...currentMemberAt };
+    const allMembers = new Set([
+      ...Object.keys(body.visits),
+      ...Object.keys(current?.visits || {}),
+    ]);
+    for (const mid of allMembers) {
+      const incomingAt = incomingMemberAt[mid] || 0;
+      const existingAt = currentMemberAt[mid] || 0;
+      if (incomingAt >= existingAt) {
+        merged[mid] = body.visits[mid] || [];
+        memberSavedAt[mid] = incomingAt || Date.now();
+      } else {
+        merged[mid] = (current?.visits || {})[mid] || [];
+      }
+    }
     const payload = {
       version: 1,
       savedAt: Date.now(),
-      visits: body.visits,
+      memberSavedAt,
+      visits: merged,
     };
 
     const blobOk = await writeBlob(payload);

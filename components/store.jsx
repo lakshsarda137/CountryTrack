@@ -23,7 +23,7 @@ function loadLocal() {
     const raw = localStorage.getItem(CT_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.visits) return { visits: parsed.visits, savedAt: parsed.savedAt || 0 };
+      if (parsed && parsed.visits) return { visits: parsed.visits, savedAt: parsed.savedAt || 0, memberSavedAt: parsed.memberSavedAt || {} };
     }
   } catch (e) { console.warn("[store] load failed", e); }
   return { visits: buildSeedVisits(), savedAt: 0 };
@@ -35,6 +35,7 @@ function useStore() {
   const [ready, setReady] = useState(false);
   const [syncState, setSyncState] = useState("loading"); // loading | synced | saving | offline
   const serverAt = useRef(0);
+  const memberSavedAt = useRef({});  // per-member timestamp so server can merge correctly
   const saveTimer = useRef(null);
   const skipSave = useRef(true);
 
@@ -43,9 +44,10 @@ function useStore() {
     const at = data.savedAt || 0;
     if (at <= serverAt.current) return false;
     serverAt.current = at;
+    if (data.memberSavedAt) memberSavedAt.current = { ...memberSavedAt.current, ...data.memberSavedAt };
     skipSave.current = true;
     setVisits(data.visits);
-    try { localStorage.setItem(CT_KEY, JSON.stringify({ version: 1, savedAt: at, visits: data.visits })); } catch (e) {}
+    try { localStorage.setItem(CT_KEY, JSON.stringify({ version: 1, savedAt: at, memberSavedAt: memberSavedAt.current, visits: data.visits })); } catch (e) {}
     return true;
   }, []);
 
@@ -75,6 +77,7 @@ function useStore() {
           setSyncState("synced");
         } else {
           serverAt.current = local.savedAt;
+          if (local.memberSavedAt) memberSavedAt.current = local.memberSavedAt;
           skipSave.current = false;
           setVisits(local.visits);
           setSyncState(data?.visits ? "synced" : "offline");
@@ -103,7 +106,7 @@ function useStore() {
   useEffect(() => {
     if (!visits || !ready) return;
     try {
-      localStorage.setItem(CT_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), visits }));
+      localStorage.setItem(CT_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), memberSavedAt: memberSavedAt.current, visits }));
     } catch (e) { console.warn("[store] local save failed", e); }
 
     if (skipSave.current) {
@@ -114,7 +117,7 @@ function useStore() {
     clearTimeout(saveTimer.current);
     setSyncState("saving");
     saveTimer.current = setTimeout(() => {
-      const payload = { version: 1, savedAt: Date.now(), visits };
+      const payload = { version: 1, savedAt: Date.now(), memberSavedAt: memberSavedAt.current, visits };
       fetch(API, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -140,6 +143,7 @@ function useStore() {
     members.filter(m => (visits?.[m.id] || []).includes(country)).map(m => m.id), [visits, members]);
 
   const setMemberCountry = useCallback((mid, country, on) => {
+    memberSavedAt.current = { ...memberSavedAt.current, [mid]: Date.now() };
     setVisits(prev => {
       const cur = new Set(prev?.[mid] || []);
       if (on) cur.add(country); else cur.delete(country);
@@ -148,6 +152,7 @@ function useStore() {
   }, []);
 
   const toggle = useCallback((mid, country) => {
+    memberSavedAt.current = { ...memberSavedAt.current, [mid]: Date.now() };
     setVisits(prev => {
       const cur = new Set(prev?.[mid] || []);
       if (cur.has(country)) cur.delete(country); else cur.add(country);
