@@ -72,6 +72,11 @@ function Main() {
     ["manage", "Manage", "Manage", window.Icons.list],
   ];
 
+  useEffect(() => {
+    document.body.classList.toggle("map-active", view === "map");
+    return () => document.body.classList.remove("map-active");
+  }, [view]);
+
   return (
     <div className="app">
       <div className="topbar">

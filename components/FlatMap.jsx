@@ -18,6 +18,14 @@ function FlatMap({ store, active, onSelectCountry }) {
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
+    const blockScroll = (e) => { e.preventDefault(); };
+    el.addEventListener("touchmove", blockScroll, { passive: false });
+    return () => el.removeEventListener("touchmove", blockScroll);
+  }, []);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
     const sync = () => {
       const w = Math.max(280, el.clientWidth);
       const h = Math.max(280, el.clientHeight);
@@ -30,7 +38,7 @@ function FlatMap({ store, active, onSelectCountry }) {
     return () => ro.disconnect();
   }, []);
 
-  const { paths, graticule, spherePath, projection, geoPath, byName } = useMemo(() => {
+  const { paths, graticule, spherePath, projection, geoPath, byName, coverTransform } = useMemo(() => {
     const fc = { type: "FeatureCollection", features: idx.features.filter(f => f.__name !== "Antarctica") };
     const projection = d3.geoNaturalEarth1().fitExtent([[8, 8], [W - 8, H - 8]], fc);
     const gp = d3.geoPath(projection);
@@ -43,20 +51,35 @@ function FlatMap({ store, active, onSelectCountry }) {
       byName[f.__name] = rec;
       return rec;
     }).filter(p => p.d);
-    return { paths, graticule: gp(d3.geoGraticule10()), spherePath: gp({ type: "Sphere" }), projection, geoPath: gp, byName };
+
+    // "Cover" zoom — fill the viewport like Google Maps (crop edges, pan to explore).
+    const b = gp.bounds(fc);
+    const cw = b[1][0] - b[0][0], ch = b[1][1] - b[0][1];
+    const cx = (b[0][0] + b[1][0]) / 2, cy = (b[0][1] + b[1][1]) / 2;
+    const coverK = cw > 0 && ch > 0 ? Math.min(3, Math.max(W / cw, H / ch)) : 1;
+    const coverTransform = d3.zoomIdentity
+      .translate(W / 2 - coverK * cx, H / 2 - coverK * cy)
+      .scale(coverK);
+
+    return { paths, graticule: gp(d3.geoGraticule10()), spherePath: gp({ type: "Sphere" }), projection, geoPath: gp, byName, coverTransform };
   }, [idx, W, H]);
+
+  const coverRef = useRef(null);
+
+  useEffect(() => {
+    coverRef.current = coverTransform;
+  }, [coverTransform]);
 
   useEffect(() => {
     const svg = svgRef.current;
     const g = gRef.current;
-    if (!svg || !g) return;
+    if (!svg || !g || !coverTransform) return;
 
     const { w, h } = sizeRef.current;
-    const pad = Math.max(w, h);
+    const kMin = coverTransform.k;
 
     const zoom = d3.zoom()
-      .scaleExtent([1, 16])
-      .translateExtent([[-pad * 2, -pad * 2], [w + pad * 2, h + pad * 2]])
+      .scaleExtent([kMin, 14])
       .filter((e) => !e.button)
       .on("zoom", (e) => {
         d3.select(g).attr("transform", e.transform);
@@ -66,13 +89,12 @@ function FlatMap({ store, active, onSelectCountry }) {
     const sel = d3.select(svg);
     sel.call(zoom);
     sel.on("dblclick.zoom", null);
-    sel.call(zoom.transform, d3.zoomIdentity);
-    d3.select(g).attr("transform", null);
-    setT({ k: 1, x: 0, y: 0 });
+    sel.call(zoom.transform, coverTransform);
+    setT({ k: coverTransform.k, x: coverTransform.x, y: coverTransform.y });
     zoomRef.current = zoom;
 
     return () => sel.on(".zoom", null);
-  }, [W, H]);
+  }, [W, H, coverTransform]);
 
   const flyTo = (name) => {
     const f = idx.byName.get(window.GEO.norm(name));
@@ -80,7 +102,7 @@ function FlatMap({ store, active, onSelectCountry }) {
     const b = geoPath.bounds(f.feature);
     const dx = b[1][0] - b[0][0], dy = b[1][1] - b[0][1];
     const cx = (b[0][0] + b[1][0]) / 2, cy = (b[0][1] + b[1][1]) / 2;
-    const k = Math.max(1, Math.min(12, 0.88 / Math.max(dx / W, dy / H || 0.0001)));
+    const k = Math.max(coverTransform.k, Math.min(12, 0.88 / Math.max(dx / W, dy / H || 0.0001)));
     const tx = W / 2 - k * cx, ty = H / 2 - k * cy;
     d3.select(svgRef.current).transition().duration(700)
       .call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(k));
@@ -88,8 +110,8 @@ function FlatMap({ store, active, onSelectCountry }) {
   };
 
   const resetZoom = () => {
-    if (!svgRef.current || !zoomRef.current) return;
-    d3.select(svgRef.current).transition().duration(500).call(zoomRef.current.transform, d3.zoomIdentity);
+    if (!svgRef.current || !zoomRef.current || !coverRef.current) return;
+    d3.select(svgRef.current).transition().duration(500).call(zoomRef.current.transform, coverRef.current);
     setFocused(null);
   };
 
@@ -116,7 +138,7 @@ function FlatMap({ store, active, onSelectCountry }) {
         <div className="map-search">
           <window.SearchBox store={store} onSelect={onSelect} placeholder="Search countries…" />
         </div>
-        {t.k > 1.05 && <button className="map-reset ghost-btn" onClick={resetZoom}><window.Icons.reset size={15} /> Reset</button>}
+        {t.k > coverTransform.k * 1.05 && <button className="map-reset ghost-btn" onClick={resetZoom}><window.Icons.reset size={15} /> Reset</button>}
 
         <svg ref={svgRef} className="map-svg" viewBox={`0 0 ${W} ${H}`} role="img"
              onMouseMove={(e) => setHover(h => h ? { ...h, x: e.clientX, y: e.clientY } : h)}>
