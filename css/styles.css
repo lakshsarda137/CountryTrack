@@ -428,20 +428,6 @@ button { font-family: inherit; cursor: pointer; }
 @media (max-width: 1000px) {
   .globe-chrome {
     grid-template-areas:
-      "search legend"
-      "atlas atlas"
-      ". ."
-      "hint hint";
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto 1fr auto;
-  }
-  .globe-search-wrap { max-width: 100%; }
-  .globe-legend-wrap { max-width: 100%; }
-}
-
-@media (max-width: 700px) {
-  .globe-chrome {
-    grid-template-areas:
       "search"
       "legend"
       "atlas"
@@ -449,8 +435,7 @@ button { font-family: inherit; cursor: pointer; }
       "hint";
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto 1fr auto;
-    gap: 6px;
-    padding: 10px 12px 12px;
+    gap: 8px;
   }
   .globe-search-wrap { max-width: none; width: 100%; }
   .globe-legend-wrap { max-width: none; width: 100%; }
