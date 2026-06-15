@@ -63,9 +63,10 @@ async function readBlob() {
     const hit = blobs.find(b => b.pathname === BLOB_PATH) || blobs[0];
     if (!hit?.url) return null;
     const res = await get(BLOB_PATH, { access: "private", token: process.env.BLOB_READ_WRITE_TOKEN });
-    if (!res) return null;
-    const text = await res.text();
-    return JSON.parse(text);
+    if (!res || res.statusCode === 404) return null;
+    const chunks = [];
+    for await (const chunk of res.stream) chunks.push(chunk);
+    return JSON.parse(Buffer.concat(chunks).toString());
   } catch (e) {
     console.error("[readBlob]", String(e));
     throw e;
