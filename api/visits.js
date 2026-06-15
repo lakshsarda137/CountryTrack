@@ -105,16 +105,15 @@ module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method === "GET") {
-    let blob = null, blobErr = null;
-    try { blob = await readBlob(); } catch (e) { blobErr = String(e); }
+    const blob = await readBlob().catch(() => null);
     const gh = await readGitHub();
     const pick = [blob, gh].filter(Boolean).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0];
     if (pick) {
       const { _sha, ...out } = pick;
-      return res.status(200).json({ ...out, _blobErr: blobErr });
+      return res.status(200).json(out);
     }
     const stat = await readStatic(req);
-    return res.status(200).json({ ...(stat || { version: 1, savedAt: 0, visits: {} }), _blobErr: blobErr });
+    return res.status(200).json(stat || { version: 1, savedAt: 0, visits: {} });
   }
 
   if (req.method === "PUT") {
