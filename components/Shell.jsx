@@ -110,15 +110,7 @@ function Main() {
 
       <div className="view">
         {view === "globe" && <window.GlobeView store={store} active={active} onSelectCountry={setEditing} />}
-        {view === "map" && (
-          <div className="view-pad view-pad-map">
-            <div className="view-head">
-              <div className="eyebrow">/// flat projection</div>
-              <h2>World map</h2>
-            </div>
-            <window.FlatMap store={store} active={active} onSelectCountry={setEditing} />
-          </div>
-        )}
+        {view === "map" && <window.FlatMap store={store} active={active} onSelectCountry={setEditing} />}
         {view === "stats" && <window.Stats store={store} active={active} refreshTick={refreshTick} />}
         {view === "leaderboard" && <window.Leaderboard store={store} refreshTick={refreshTick} />}
         {view === "manage" && <window.Manage store={store} active={active} onToast={showToast} />}
