@@ -450,6 +450,7 @@ button { font-family: inherit; cursor: pointer; }
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto 1fr auto;
     gap: 6px;
+    padding: 10px 12px 12px;
   }
   .globe-search-wrap { max-width: none; width: 100%; }
   .globe-legend-wrap { max-width: none; width: 100%; }
@@ -500,11 +501,6 @@ button { font-family: inherit; cursor: pointer; }
   .search { padding: 9px 11px; }
   .search input { font-size: 14px; }
   .ctable-body { max-height: calc(100dvh - 240px); }
-  .globe-chrome {
-    padding: 10px 12px 12px;
-  }
-  .globe-search-wrap { max-width: none; width: 100%; }
-  .globe-legend-wrap { max-width: none; width: 100%; }
   .globe-atlas-wrap { width: 100%; }
   .atlas-card { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
   .atlas-label { font-size: 9px; margin: 0; flex-shrink: 0; }
