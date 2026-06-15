@@ -88,12 +88,12 @@ function Stats({ store, active, refreshTick }) {
         <h4>Countries per year of life</h4>
         <div style={{ marginTop: 14 }}>
           {ranked.map(p => (
-            <div key={p.m.id} style={{ display: "flex", alignItems: "center", gap: 12, margin: "12px 0" }}>
-              <div style={{ width: 116, display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600 }}>
+            <div key={p.m.id} className="pace-row">
+              <div className="pace-label">
                 <window.Avatar member={p.m} size="sm"/>{p.m.name}
               </div>
               <div className="bar-track"><div className="bar-fill" style={{ width: (p.pace / max * 100) + "%", background: p.m.color, boxShadow: `0 0 14px -2px ${p.m.color}` }}></div></div>
-              <div style={{ width: 92, textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 13 }}>
+              <div className="pace-val">
                 <div><span style={{ fontWeight: 600 }}>{p.pace.toFixed(2)}</span><span className="faint">/yr</span></div>
                 <div className="faint" style={{ fontSize: 11 }}>age {p.ageInt}</div>
               </div>
@@ -111,8 +111,8 @@ function Stats({ store, active, refreshTick }) {
     return (
       <div className="stat-card">
         <h4>Where they've been</h4>
-        <div style={{ display: "flex", gap: 18, alignItems: "center", marginTop: 14 }}>
-          <div style={{ width: 116, height: 116, borderRadius: "50%", background: conic(parts), flex: "0 0 auto", position: "relative", boxShadow: "inset 0 0 0 1px rgba(255,255,255,.06)" }}>
+        <div style={{ display: "flex", gap: 18, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
+          <div className="donut-ring" style={{ background: conic(parts) }}>
             <div style={{ position: "absolute", inset: 26, borderRadius: "50%", background: "var(--panel)", display: "grid", placeItems: "center" }}>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700 }}>{S.unionCount}</div>
@@ -157,7 +157,7 @@ function Stats({ store, active, refreshTick }) {
             <div key={p.m.id} style={{ margin: "12px 0" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 5 }}>
                 <span style={{ fontWeight: 600, display: "flex", gap: 7, alignItems: "center" }}><window.Avatar member={p.m} size="sm"/>{p.m.name}</span>
-                <span className="mono faint">N{p.north} · S{p.south} · E{p.east} · W{p.west}</span>
+                <span className="mono faint hemi-meta">N{p.north} · S{p.south} · E{p.east} · W{p.west}</span>
               </div>
               <div style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", background: "var(--bg)" }}>
                 <div style={{ width: (p.north / tot * 100) + "%", background: p.m.color }}></div>
@@ -240,7 +240,7 @@ function Stats({ store, active, refreshTick }) {
       </div>
 
       {layout === "overview" && (
-        <div className="grid" style={{ gridTemplateColumns: "repeat(4,1fr)" }}>
+        <div className="grid stats-grid stats-grid-4">
           {highlights}
           <RaceBars/>
           <PaceBars/>
@@ -253,7 +253,7 @@ function Stats({ store, active, refreshTick }) {
       )}
 
       {layout === "charts" && (
-        <div className="grid" style={{ gridTemplateColumns: "repeat(4,1fr)" }}>
+        <div className="grid stats-grid stats-grid-4">
           <RaceBars title="Who's visited the most"/>
           <PaceBars/>
           <FamilyDonut/>
@@ -266,7 +266,7 @@ function Stats({ store, active, refreshTick }) {
       )}
 
       {layout === "compact" && (
-        <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+        <div className="grid stats-grid stats-grid-3">
           {highlights}
           <RaceBars/>
           <PaceBars/>
@@ -287,7 +287,7 @@ function HemisphereInline({ S }) {
   return (
     <div>
       <h4>Hemisphere footprint (family)</h4>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginTop: 16 }}>
+      <div className="hemi-bars">
         {cells.map(([l, v, c]) => (
           <div key={l} style={{ textAlign: "center" }}>
             <div style={{ height: 90, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>

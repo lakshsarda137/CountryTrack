@@ -65,11 +65,11 @@ function Main() {
   }, [store.visits, store.members]);
 
   const NAV = [
-    ["globe", "Globe", window.Icons.globe],
-    ["map", "Flat map", window.Icons.map],
-    ["stats", "Stats", window.Icons.stats],
-    ["leaderboard", "Leaderboard", window.Icons.trophy],
-    ["manage", "Manage", window.Icons.list],
+    ["globe", "Globe", "Globe", window.Icons.globe],
+    ["map", "Flat map", "Map", window.Icons.map],
+    ["stats", "Stats", "Stats", window.Icons.stats],
+    ["leaderboard", "Leaderboard", "Board", window.Icons.trophy],
+    ["manage", "Manage", "Manage", window.Icons.list],
   ];
 
   return (
@@ -83,16 +83,18 @@ function Main() {
           </div>
         </div>
         <nav className="nav">
-          {NAV.map(([id, label, Ico]) => (
+          {NAV.map(([id, label, short, Ico]) => (
             <button key={id} className={view === id ? "active" : ""} onClick={() => setView(id)}>
-              <Ico className="nav-ico" size={16}/> {label}
+              <Ico className="nav-ico" size={16}/>
+              <span className="nav-label">{label}</span>
+              <span className="nav-label-short">{short}</span>
             </button>
           ))}
         </nav>
-        <div className="topbar-right">
+        <div className="member-bar">
           <button className="ghost-btn refresh-btn" onClick={refreshData} disabled={refreshing} title="Fetch latest population data & refresh everyone's age">
             <span className={refreshing ? "spin-ico" : ""}><window.Icons.reset size={15}/></span>
-            {refreshing ? "Refreshing…" : "Refresh"}
+            {refreshing ? "…" : "Refresh"}
           </button>
           <div className="legend">
             {store.members.map(m => (
@@ -109,7 +111,7 @@ function Main() {
       <div className="view">
         {view === "globe" && <window.GlobeView store={store} active={active} onSelectCountry={setEditing} />}
         {view === "map" && (
-          <div className="view-pad">
+          <div className="view-pad view-pad-map">
             <div className="view-head">
               <div className="eyebrow">/// flat projection</div>
               <h2>World map</h2>

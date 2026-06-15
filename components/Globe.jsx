@@ -131,12 +131,12 @@ function GlobeView({ store, active, onSelectCountry }) {
       <div ref={elRef} className="globe-canvas"></div>
       <div className="globe-search"><window.SearchBox store={store} onSelect={focusOn} placeholder="Find a country…" /></div>
       <div className="globe-overlay">
-        <div className="card">
-          <div style={{ fontSize: 12, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--gold-dim)", fontFamily: "var(--font-mono)" }}>Family Atlas</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 38, fontWeight: 600, lineHeight: 1, marginTop: 8 }}>
-            {familyCount}<small style={{ fontSize: 15, color: "var(--muted)", fontWeight: 500 }}> / {idx.totalCountries}</small>
+        <div className="card atlas-card">
+          <div className="atlas-label">Family Atlas</div>
+          <div className="atlas-count">
+            {familyCount}<span className="atlas-total"> / {idx.totalCountries}</span>
           </div>
-          <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>countries the family has visited</div>
+          <div className="atlas-sub muted">visited</div>
         </div>
       </div>
       <div className="globe-hint">

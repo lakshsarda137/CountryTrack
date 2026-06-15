@@ -76,7 +76,7 @@ function FlatMap({ store, active, onSelectCountry }) {
   return (
     <div className="map-wrap" onMouseLeave={() => setHover(null)}>
       <div className="map-search">
-        <window.SearchBox store={store} onSelect={onSelect} placeholder="Search any country (incl. Singapore, Vatican…)" />
+        <window.SearchBox store={store} onSelect={onSelect} placeholder="Search countries…" />
       </div>
       {t.k > 1.05 && <button className="map-reset ghost-btn" onClick={resetZoom}><window.Icons.reset size={15} /> Reset view</button>}
 
