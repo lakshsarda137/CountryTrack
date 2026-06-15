@@ -2,9 +2,10 @@
 function Manage({ store, active, onToast }) {
   const idx = window.GEO.index;
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState("all"); // all | visited | unvisited
+  const [filter, setFilter] = useState("all");
   const [continent, setContinent] = useState("All");
   const fileRef = useRef(null);
+  const isHome = (name) => window.GEO.norm(name) === window.GEO.norm(window.CT_DATA.HOME_COUNTRY);
 
   const continents = useMemo(() => {
     const s = new Set(idx.countries.filter(c => c.isCountry).map(c => c.continent));
@@ -44,35 +45,47 @@ function Manage({ store, active, onToast }) {
   };
 
   return (
-    <div className="view-pad">
+    <div className="view-pad view-pad-manage">
       <div className="view-head">
         <div className="eyebrow">Edit · everything lives here</div>
         <h2>Manage trips</h2>
       </div>
 
-      <div className="manage-toolbar">
-        <label className="search">
+      <div className="manage-controls">
+        <label className="search manage-search">
           <window.Icons.search size={18}/>
-          <input placeholder="Search countries…" value={q} onChange={(e) => setQ(e.target.value)} />
-          {q && <button className="ghost-btn" style={{ padding: "4px 7px" }} onClick={() => setQ("")}><window.Icons.x size={14}/></button>}
+          <input placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
+          {q && <button type="button" className="search-clear" onClick={() => setQ("")} aria-label="Clear search"><window.Icons.x size={14}/></button>}
         </label>
-        <div className="seg">
-          {["all", "visited", "unvisited"].map(f => (
-            <button key={f} className={filter === f ? "active" : ""} onClick={() => setFilter(f)}>{f[0].toUpperCase() + f.slice(1)}</button>
-          ))}
-        </div>
-        <select className="ghost-btn" value={continent} onChange={(e) => setContinent(e.target.value)} style={{ appearance: "auto" }}>
-          {continents.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
 
-      <div className="manage-toolbar" style={{ marginTop: -4 }}>
-        <button className="ghost-btn" onClick={doExport}><window.Icons.download size={15}/> Export data.json</button>
-        <button className="ghost-btn" onClick={() => fileRef.current.click()}><window.Icons.upload size={15}/> Import</button>
-        <input ref={fileRef} type="file" accept="application/json" hidden onChange={doImport} />
-        <div style={{ flex: 1 }}></div>
-        <button className="ghost-btn" onClick={() => { if (confirm("Reset to the sample family data?")) { store.resetToSeed(); onToast("Reset to sample data"); } }}><window.Icons.reset size={15}/> Reset sample</button>
-        <button className="ghost-btn" onClick={() => { if (confirm("Clear ALL trips for everyone?")) { store.clearAll(); onToast("Cleared all trips"); } }}>Clear all</button>
+        <div className="manage-bar">
+          <div className="seg manage-seg">
+            {["all", "visited", "unvisited"].map(f => (
+              <button key={f} type="button" className={filter === f ? "active" : ""} onClick={() => setFilter(f)}>
+                {f === "all" ? "All" : f === "visited" ? "Visited" : "New"}
+              </button>
+            ))}
+          </div>
+          <select className="manage-select" value={continent} onChange={(e) => setContinent(e.target.value)}>
+            {continents.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        <div className="manage-actions">
+          <button type="button" className="ghost-btn" onClick={doExport} title="Export data.json">
+            <window.Icons.download size={15}/><span className="act-label">Export</span>
+          </button>
+          <button type="button" className="ghost-btn" onClick={() => fileRef.current.click()} title="Import data.json">
+            <window.Icons.upload size={15}/><span className="act-label">Import</span>
+          </button>
+          <input ref={fileRef} type="file" accept="application/json" hidden onChange={doImport} />
+          <button type="button" className="ghost-btn" onClick={() => { if (confirm("Reset to the sample family data?")) { store.resetToSeed(); onToast("Reset to sample data"); } }} title="Reset sample data">
+            <window.Icons.reset size={15}/><span className="act-label">Reset</span>
+          </button>
+          <button type="button" className="ghost-btn" onClick={() => { if (confirm("Clear ALL trips for everyone?")) { store.clearAll(); onToast("Cleared all trips"); } }} title="Clear all trips">
+            <span className="act-label">Clear</span>
+          </button>
+        </div>
       </div>
 
       <div className="ctable">
@@ -80,24 +93,31 @@ function Manage({ store, active, onToast }) {
           <div className="cname">Country · {rows.length}</div>
           {store.members.map(m => <div key={m.id} className="cmem" title={m.name}>{window.initials(m.name)}</div>)}
         </div>
-        <div style={{ maxHeight: "calc(100vh - 360px)", overflowY: "auto" }}>
+        <div className="ctable-body">
           {rows.length === 0 && <div className="empty">No countries match.</div>}
           {rows.map(c => {
-            const fill = window.GEO.blendColors(store.members.filter(m => store.isVisited(m.id, c.name)).map(m => m.color));
+            const home = isHome(c.name);
+            const fill = home
+              ? "var(--gold)"
+              : window.GEO.blendColors(store.members.filter(m => store.isVisited(m.id, c.name)).map(m => m.color));
             return (
-              <div key={c.name} className="row">
+              <div key={c.name} className={"row" + (home ? " row-home" : "")}>
                 <div className="cname">
-                  <span className="swatch" style={{ background: fill || "var(--surface)" }}></span>
-                  <span>{c.name}</span>
-                  <span className="cont">{c.continent}{!c.isOfficial && " · terr."}</span>
+                  <span className={"swatch" + (home ? " swatch-home" : "")} style={{ background: fill || "var(--surface)" }}></span>
+                  <span className="cname-text">
+                    <span className="cname-main">{c.name}</span>
+                    {home
+                      ? <span className="cont cont-home">Home · {window.CT_DATA.HOME.name}</span>
+                      : <span className="cont">{c.continent}{!c.isOfficial && " · terr."}</span>}
+                  </span>
                 </div>
                 {store.members.map(m => {
                   const on = store.isVisited(m.id, c.name);
                   return (
                     <div key={m.id} className="cmem">
-                      <button className={"cbox" + (on ? " on" : "")} style={on ? { background: m.color } : null}
+                      <button type="button" className={"cbox" + (on ? " on" : "")} style={on ? { background: m.color } : null}
                         onClick={() => store.setMemberCountry(m.id, c.name, !on)} aria-label={`${m.name} visited ${c.name}`}>
-                        <window.Icons.check size={14} sw={3}/>
+                        <span className="cbox-tick">✓</span>
                       </button>
                     </div>
                   );

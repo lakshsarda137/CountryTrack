@@ -70,5 +70,7 @@
     "drc": "Democratic Republic of the Congo",
   };
 
-  window.CT_DATA = { MEMBERS, HOME, SEED_VISITS, NAME_ALIASES };
+  const HOME_COUNTRY = "India";
+
+  window.CT_DATA = { MEMBERS, HOME, HOME_COUNTRY, SEED_VISITS, NAME_ALIASES };
 })();
